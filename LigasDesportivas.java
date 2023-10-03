@@ -1,6 +1,9 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -27,6 +30,8 @@ import java.time.format.DateTimeFormatter;
 
 public class LigasDesportivas {
 
+  public static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
   public static class Equipe {
     int vitorias;
     int derrotas;
@@ -36,6 +41,10 @@ public class LigasDesportivas {
       this.nome = nome;
       this.vitorias = 0;
       this.derrotas = 0;
+    }
+
+    public String getNome() {
+      return this.nome;
     }
   }
 
@@ -49,12 +58,12 @@ public class LigasDesportivas {
     int placarEquipe1;
     int placarEquipe2;
 
-    public Partida(LocalDate data, Equipe equipe1, Equipe equipe2) {
+    public Partida(LocalDate data, Equipe equipe1, Equipe equipe2, int placarEquipe1, int placarEquipe2) {
       this.data = data;
       this.equipe1 = equipe1;
       this.equipe2 = equipe2;
-      this.placarEquipe1 = -1;
-      this.placarEquipe2 = -1;
+      this.placarEquipe1 = placarEquipe1;
+      this.placarEquipe2 = placarEquipe2;
     }
 
     public void registrarPlacar(int placarEquipe1, int placarEquipe2) {
@@ -70,11 +79,36 @@ public class LigasDesportivas {
     public void cadastrarEquipe(Equipe equipe) {
       listaEquipes.add(equipe);
       listaEquipes.sort((e1, e2) -> e1.nome.compareTo(e2.nome));
+      try {
+        BufferedWriter writer = new BufferedWriter(new FileWriter("equipes.csv", true));
+        writer.append(equipe.nome + "\n");
+        writer.close();
+      } catch (IOException e) {
+        System.out.println("Erro ao salvar a equipe em equipes.csv");
+      }
     }
 
     public void cadastrarPartida(Partida partida) {
       listaPartidas.add(partida);
       listaPartidas.sort((p1, p2) -> p1.data.compareTo(p2.data));
+      partidaCSV();
+    }
+
+    public void partidaCSV() {
+      try {
+        BufferedWriter writer = new BufferedWriter(new FileWriter("partidas.csv"));
+        for (Partida partida : listaPartidas) {
+          writer.append(partida.data.format(formatter) + "," + partida.equipe1.nome + "," + partida.equipe2.nome);
+          if (partida.placarEquipe1 != -1 && partida.placarEquipe2 != -1) {
+            writer.append("," + partida.placarEquipe1 + "," + partida.placarEquipe2 + "\n");
+          } else {
+            writer.append("\n");
+          }
+        }
+        writer.close();
+      } catch (IOException e) {
+        System.out.println("Erro ao salvar a partida em partidas.csv");
+      }
     }
 
     public void listarEquipes() {
@@ -84,12 +118,18 @@ public class LigasDesportivas {
       System.out.println();
     }
 
-    public void listarPartidas(DateTimeFormatter formatter) {
+    public void listarPartidas() {
       for (Partida partida : listaPartidas) {
         System.out.println(partida.data.format(formatter) + " - " + partida.equipe1.nome + " x " + partida.equipe2.nome);
-        // Se aquela partida tiver placar, exibir o placar
         if (partida.placarEquipe1 != -1 && partida.placarEquipe2 != -1) {
-          System.out.println("Placar: " + partida.placarEquipe1 + " x " + partida.placarEquipe2);
+          System.out.print("Placar: " + partida.placarEquipe1 + " x " + partida.placarEquipe2);
+          if (partida.placarEquipe1 > partida.placarEquipe2) {
+            System.out.print(" - " + partida.equipe1.nome + " venceu\n");
+          } else if (partida.placarEquipe1 < partida.placarEquipe2) {
+            System.out.print(" - " + partida.equipe2.nome + " venceu\n");
+          } else {
+            System.out.print(" - Empate\n");
+          }
         }
       }
       System.out.println();
@@ -106,7 +146,8 @@ public class LigasDesportivas {
 
     public Partida retornaPartida(LocalDate data, String nomeEquipe1, String nomeEquipe2) {
       for (Partida partidaLista : listaPartidas) {
-        if (partidaLista.data.equals(data) && partidaLista.equipe1.nome.equals(nomeEquipe1) && partidaLista.equipe2.nome.equals(nomeEquipe2)) {
+        if (partidaLista.data.equals(data) && partidaLista.equipe1.nome.equals(nomeEquipe1)
+            && partidaLista.equipe2.nome.equals(nomeEquipe2)) {
           return partidaLista;
         }
       }
@@ -115,17 +156,54 @@ public class LigasDesportivas {
 
     public void registrarPlacar(Partida partida, int placarEquipe1, int placarEquipe2) {
       partida.registrarPlacar(placarEquipe1, placarEquipe2);
+
     }
   }
 
   public static void main(String[] args) {
 
     // * Declaração de variáveis
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     Campeonato campeonato = new Campeonato();
     Scanner scanner = new Scanner(System.in);
     int opcao;
 
+    // * Carregar equipes do arquivo equipes.csv
+    try {
+      Scanner scannerEquipes = new Scanner(new java.io.File("equipes.csv"));
+      while (scannerEquipes.hasNextLine()) {
+        String nomeEquipe = scannerEquipes.nextLine();
+        Equipe equipe = new Equipe(nomeEquipe);
+        campeonato.listaEquipes.add(equipe);
+      }
+      scannerEquipes.close();
+    } catch (Exception e) {
+      System.out.println("Erro ao carregar equipes do arquivo equipes.csv");
+    }
+
+    // * Carregar partidas do arquivo partidas.csv
+    try {
+      Scanner scannerPartidas = new Scanner(new java.io.File("partidas.csv"));
+      while (scannerPartidas.hasNextLine()) {
+        String[] dadosPartida = scannerPartidas.nextLine().split(",");
+        LocalDate data = LocalDate.parse(dadosPartida[0], formatter);
+        Equipe equipe1 = campeonato.retornaEquipe(dadosPartida[1]);
+        Equipe equipe2 = campeonato.retornaEquipe(dadosPartida[2]);
+
+        int placarEquipe1 = -1, placarEquipe2 = -1;
+
+        if (dadosPartida.length == 5) {
+          placarEquipe1 = Integer.parseInt(dadosPartida[3]);
+          placarEquipe2 = Integer.parseInt(dadosPartida[4]);
+        } 
+
+        Partida partida = new Partida(data, equipe1, equipe2, placarEquipe1, placarEquipe2);
+        campeonato.listaPartidas.add(partida);
+      }
+      scannerPartidas.close();
+    } catch (Exception e) {
+      System.out.println("Erro ao carregar partidas do arquivo partidas.csv");
+    }
+    
     System.out.println("Bem vindo ao sistema de ligas desportivas!\n");
 
     do {
@@ -149,7 +227,7 @@ public class LigasDesportivas {
           break;
 
         case 2:
-          criarCadastrarPartida(scanner, formatter, campeonato);
+          criarCadastrarPartida(scanner, campeonato);
           break;
 
         case 3:
@@ -157,11 +235,15 @@ public class LigasDesportivas {
           break;
 
         case 4:
-          campeonato.listarPartidas(formatter);
+          campeonato.listarPartidas();
           break;
 
         case 5:
-          registrarPlacarPartida(scanner, formatter, campeonato);
+          registrarPlacarPartida(scanner, campeonato);
+          break;
+
+        case 0:
+          System.out.println("Saindo do sistema...\n");
           break;
 
         default:
@@ -186,11 +268,11 @@ public class LigasDesportivas {
     }
   }
 
-  public static void criarCadastrarPartida(Scanner scanner, DateTimeFormatter formatter, Campeonato campeonato) {
+  public static void criarCadastrarPartida(Scanner scanner, Campeonato campeonato) {
 
     String nomeEquipe1;
     String nomeEquipe2;
-    
+
     do {
       System.out.print("Digite o nome da primeira equipe: ");
       nomeEquipe1 = scanner.nextLine();
@@ -200,7 +282,7 @@ public class LigasDesportivas {
       }
 
     } while (campeonato.retornaEquipe(nomeEquipe1) == null);
-    
+
     do {
       System.out.print("Digite o nome da segunda equipe: ");
       nomeEquipe2 = scanner.nextLine();
@@ -222,7 +304,7 @@ public class LigasDesportivas {
     try {
       LocalDate data = LocalDate.parse(inputData, formatter); // ! Conferir se a data é atribuida formatada ou não
       System.out.println("Data cadastrada: " + data.format(formatter) + "\n");
-      Partida partida = new Partida(data, equipe1, equipe2);
+      Partida partida = new Partida(data, equipe1, equipe2, -1, -1);
 
       if (campeonato.retornaPartida(data, nomeEquipe1, nomeEquipe2) == null) {
         campeonato.cadastrarPartida(partida);
@@ -236,7 +318,7 @@ public class LigasDesportivas {
 
   }
 
-  public static void registrarPlacarPartida(Scanner scanner, DateTimeFormatter formatter, Campeonato campeonato) {
+  public static void registrarPlacarPartida(Scanner scanner, Campeonato campeonato) {
     System.out.print("Digite o nome da primeira equipe: ");
     String nomeEquipe1 = scanner.nextLine();
 
@@ -256,6 +338,10 @@ public class LigasDesportivas {
     System.out.print("Digite o placar da segunda equipe: ");
     int placarEquipe2 = scanner.nextInt();
 
-    partida.registrarPlacar(placarEquipe1, placarEquipe2);  
+    partida.registrarPlacar(placarEquipe1, placarEquipe2);
+
+    campeonato.partidaCSV();
+
+    System.out.println("Placar registrado com sucesso!\n");
   }
 }
