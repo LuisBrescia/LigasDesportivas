@@ -17,12 +17,12 @@ import java.time.format.DateTimeFormatter;
  * 2. Registrar os placares de partidas que já aconteceram; - CONCLUÍDO
  
  ? (Henrique Fadel) 
- * 3. Manter um registro de toda as partidas, mostrando placar e vencedor de cada confronto; 
+ * 3. Manter um registro de toda as partidas, mostrando placar e vencedor de cada confronto; - CONCLUÍDO
  
  ? (Bernardo Elias) 
  * 4. Gerar a tabela de classificação em ordem decrescente de pontos, apontando ainda: 
  * quantos jogos cada equipe fez quantos pontos (vitórias/derrotas) cada equipe "obteve
- * o total de pontos marcados e sofridos por cada equipe nas partidas disputadas 
+ * o total de pontos marcados e sofridos por cada equipe nas partidas disputadas  - CONCLUÍDO
  
  ? (Caio Souza)
  * 5. Indicar a equipe com o melhor ataque e a equipe com a melhor defesa. 
@@ -33,14 +33,16 @@ public class LigasDesportivas {
   public static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
   public static class Equipe {
-    int vitorias;
-    int derrotas;
+    int vitorias, derrotas, golsMarcados, golsSofridos, pontos;
     String nome;
 
-    public Equipe(String nome) {
+    public Equipe(String nome, int vitorias, int derrotas, int golsMarcados, int golsSofridos, int pontos) {
       this.nome = nome;
-      this.vitorias = 0;
-      this.derrotas = 0;
+      this.vitorias = vitorias;
+      this.derrotas = derrotas;
+      this.golsMarcados = golsMarcados;
+      this.golsSofridos = golsSofridos;
+      this.pontos = pontos;
     }
 
     public String getNome() {
@@ -69,6 +71,25 @@ public class LigasDesportivas {
     public void registrarPlacar(int placarEquipe1, int placarEquipe2) {
       this.placarEquipe1 = placarEquipe1;
       this.placarEquipe2 = placarEquipe2;
+
+      if (placarEquipe1 > placarEquipe2) {
+        equipe1.vitorias++;
+        equipe2.derrotas++;
+        equipe1.pontos += 2;
+        equipe2.pontos += 1;
+      } else if (placarEquipe1 < placarEquipe2) {
+        equipe2.vitorias++;
+        equipe1.derrotas++;
+        equipe2.pontos += 2;
+        equipe1.pontos += 1;
+      } 
+
+      equipe1.golsMarcados += placarEquipe1;
+      equipe1.golsSofridos += placarEquipe2;
+
+      equipe2.golsMarcados += placarEquipe2;
+      equipe2.golsSofridos += placarEquipe1;
+
     }
   }
 
@@ -79,19 +100,28 @@ public class LigasDesportivas {
     public void cadastrarEquipe(Equipe equipe) {
       listaEquipes.add(equipe);
       listaEquipes.sort((e1, e2) -> e1.nome.compareTo(e2.nome));
-      try {
-        BufferedWriter writer = new BufferedWriter(new FileWriter("equipes.csv", true));
-        writer.append(equipe.nome + "\n");
-        writer.close();
-      } catch (IOException e) {
-        System.out.println("Erro ao salvar a equipe em equipes.csv");
-      }
+      equipeCSV();
     }
 
     public void cadastrarPartida(Partida partida) {
       listaPartidas.add(partida);
       listaPartidas.sort((p1, p2) -> p1.data.compareTo(p2.data));
       partidaCSV();
+    }
+
+    public void equipeCSV() {
+      try {
+        BufferedWriter writer = new BufferedWriter(new FileWriter("equipes.csv"));
+        for (Equipe equipe : listaEquipes) {
+          writer.append(equipe.nome + "," + equipe.vitorias + "," + equipe.derrotas + "," + equipe.golsMarcados + ","
+              + equipe.golsSofridos + "," + equipe.pontos);
+
+          writer.append("\n");
+        }
+        writer.close();
+      } catch (IOException e) {
+        System.out.println("Erro ao salvar a equipe em equipes.csv");
+      }
     }
 
     public void partidaCSV() {
@@ -153,11 +183,16 @@ public class LigasDesportivas {
       }
       return null;
     }
-
-    public void registrarPlacar(Partida partida, int placarEquipe1, int placarEquipe2) {
-      partida.registrarPlacar(placarEquipe1, placarEquipe2);
-
+    
+    public void tabelaClassificacao() {
+      listaEquipes.sort((e1, e2) -> e2.pontos - e1.pontos);
+      System.out.println("Tabela de classificação:\n");
+      for (Equipe equipe : listaEquipes) {
+        System.out.println(equipe.nome + " (" + (equipe.vitorias + equipe.derrotas) + " partida ) - " + equipe.pontos + " pontos, com " + equipe.vitorias + " vitórias e " + equipe.derrotas + " derrotas");
+      }
+      System.out.println();
     }
+
   }
 
   public static void main(String[] args) {
@@ -171,8 +206,11 @@ public class LigasDesportivas {
     try {
       Scanner scannerEquipes = new Scanner(new java.io.File("equipes.csv"));
       while (scannerEquipes.hasNextLine()) {
-        String nomeEquipe = scannerEquipes.nextLine();
-        Equipe equipe = new Equipe(nomeEquipe);
+        String[] dadosEquipe = scannerEquipes.nextLine().split(",");
+        
+        Equipe equipe = new Equipe(dadosEquipe[0], Integer.parseInt(dadosEquipe[1]), Integer.parseInt(dadosEquipe[2]),
+            Integer.parseInt(dadosEquipe[3]), Integer.parseInt(dadosEquipe[4]), Integer.parseInt(dadosEquipe[5]));
+
         campeonato.listaEquipes.add(equipe);
       }
       scannerEquipes.close();
@@ -215,6 +253,7 @@ public class LigasDesportivas {
               "3 - Listar equipes\n" +
               "4 - Listar partidas\n" +
               "5 - Registrar placar de partida\n" +
+              "6 - Tabela de classificação\n" +
               "0 - Sair do sistema\n");
 
       opcao = scanner.nextInt();
@@ -241,6 +280,10 @@ public class LigasDesportivas {
         case 5:
           registrarPlacarPartida(scanner, campeonato);
           break;
+        
+        case 6:
+          campeonato.tabelaClassificacao();
+          break;
 
         case 0:
           System.out.println("Saindo do sistema...\n");
@@ -260,7 +303,7 @@ public class LigasDesportivas {
     String nomeEquipe = scanner.nextLine();
 
     if (campeonato.retornaEquipe(nomeEquipe) == null) {
-      Equipe equipe = new Equipe(nomeEquipe);
+      Equipe equipe = new Equipe(nomeEquipe, 0, 0, 0, 0, 0);
       campeonato.cadastrarEquipe(equipe);
       System.out.println("Equipe cadastrada com sucesso!\n");
     } else {
@@ -341,6 +384,7 @@ public class LigasDesportivas {
     partida.registrarPlacar(placarEquipe1, placarEquipe2);
 
     campeonato.partidaCSV();
+    campeonato.equipeCSV();
 
     System.out.println("Placar registrado com sucesso!\n");
   }
