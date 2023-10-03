@@ -8,10 +8,10 @@ import java.time.format.DateTimeFormatter;
  ! Requisitos:
   
  ? (Vitor Rebula)
- * 1. Cadastrar partidas que irão acontecer em datas futuras; 
+ * 1. Cadastrar partidas que irão acontecer em datas futuras; - CONCLUÍDO
 
  ? (Thiago Cury)
- * 2. Registrar os placares de partidas que já aconteceram; 
+ * 2. Registrar os placares de partidas que já aconteceram; - CONCLUÍDO
  
  ? (Henrique Fadel) 
  * 3. Manter um registro de toda as partidas, mostrando placar e vencedor de cada confronto; 
@@ -40,10 +40,26 @@ public class LigasDesportivas {
   }
 
   public static class Partida {
+
     LocalDate data;
 
-    public Partida(LocalDate data) {
+    Equipe equipe1;
+    Equipe equipe2;
+
+    int placarEquipe1;
+    int placarEquipe2;
+
+    public Partida(LocalDate data, Equipe equipe1, Equipe equipe2) {
       this.data = data;
+      this.equipe1 = equipe1;
+      this.equipe2 = equipe2;
+      this.placarEquipe1 = -1;
+      this.placarEquipe2 = -1;
+    }
+
+    public void registrarPlacar(int placarEquipe1, int placarEquipe2) {
+      this.placarEquipe1 = placarEquipe1;
+      this.placarEquipe2 = placarEquipe2;
     }
   }
 
@@ -53,27 +69,53 @@ public class LigasDesportivas {
 
     public void cadastrarEquipe(Equipe equipe) {
       listaEquipes.add(equipe);
+      listaEquipes.sort((e1, e2) -> e1.nome.compareTo(e2.nome));
     }
 
     public void cadastrarPartida(Partida partida) {
-
       listaPartidas.add(partida);
+      listaPartidas.sort((p1, p2) -> p1.data.compareTo(p2.data));
     }
 
     public void listarEquipes() {
       for (Equipe equipe : listaEquipes) {
         System.out.println(equipe.nome);
       }
-      System.out.println("dasda");
+      System.out.println();
     }
 
-    public void listarPartidas() {
+    public void listarPartidas(DateTimeFormatter formatter) {
       for (Partida partida : listaPartidas) {
-        System.out.println(partida.data);
+        System.out.println(partida.data.format(formatter) + " - " + partida.equipe1.nome + " x " + partida.equipe2.nome);
+        // Se aquela partida tiver placar, exibir o placar
+        if (partida.placarEquipe1 != -1 && partida.placarEquipe2 != -1) {
+          System.out.println("Placar: " + partida.placarEquipe1 + " x " + partida.placarEquipe2);
+        }
       }
-      System.out.println("");
+      System.out.println();
     }
 
+    public Equipe retornaEquipe(String nomeEquipe) {
+      for (Equipe equipe : listaEquipes) {
+        if (equipe.nome.equals(nomeEquipe)) {
+          return equipe;
+        }
+      }
+      return null;
+    }
+
+    public Partida retornaPartida(LocalDate data, String nomeEquipe1, String nomeEquipe2) {
+      for (Partida partidaLista : listaPartidas) {
+        if (partidaLista.data.equals(data) && partidaLista.equipe1.nome.equals(nomeEquipe1) && partidaLista.equipe2.nome.equals(nomeEquipe2)) {
+          return partidaLista;
+        }
+      }
+      return null;
+    }
+
+    public void registrarPlacar(Partida partida, int placarEquipe1, int placarEquipe2) {
+      partida.registrarPlacar(placarEquipe1, placarEquipe2);
+    }
   }
 
   public static void main(String[] args) {
@@ -94,6 +136,7 @@ public class LigasDesportivas {
               "2 - Cadastrar partida\n" +
               "3 - Listar equipes\n" +
               "4 - Listar partidas\n" +
+              "5 - Registrar placar de partida\n" +
               "0 - Sair do sistema\n");
 
       opcao = scanner.nextInt();
@@ -102,7 +145,7 @@ public class LigasDesportivas {
 
       switch (opcao) {
         case 1:
-          System.out.println("Cadastrar equipe\n");
+          criarCadastrarEquipe(scanner, campeonato);
           break;
 
         case 2:
@@ -114,7 +157,11 @@ public class LigasDesportivas {
           break;
 
         case 4:
-          campeonato.listarPartidas();
+          campeonato.listarPartidas(formatter);
+          break;
+
+        case 5:
+          registrarPlacarPartida(scanner, formatter, campeonato);
           break;
 
         default:
@@ -126,16 +173,89 @@ public class LigasDesportivas {
     scanner.close();
   }
 
+  public static void criarCadastrarEquipe(Scanner scanner, Campeonato campeonato) {
+    System.out.print("Digite o nome da equipe que deseja cadastrar: ");
+    String nomeEquipe = scanner.nextLine();
+
+    if (campeonato.retornaEquipe(nomeEquipe) == null) {
+      Equipe equipe = new Equipe(nomeEquipe);
+      campeonato.cadastrarEquipe(equipe);
+      System.out.println("Equipe cadastrada com sucesso!\n");
+    } else {
+      System.out.println("Já existe uma equipe cadastrada com esse nome\n");
+    }
+  }
+
   public static void criarCadastrarPartida(Scanner scanner, DateTimeFormatter formatter, Campeonato campeonato) {
+
+    String nomeEquipe1;
+    String nomeEquipe2;
+    
+    do {
+      System.out.print("Digite o nome da primeira equipe: ");
+      nomeEquipe1 = scanner.nextLine();
+
+      if (campeonato.retornaEquipe(nomeEquipe1) == null) {
+        System.out.println("Não existe uma equipe cadastrada com esse nome\n");
+      }
+
+    } while (campeonato.retornaEquipe(nomeEquipe1) == null);
+    
+    do {
+      System.out.print("Digite o nome da segunda equipe: ");
+      nomeEquipe2 = scanner.nextLine();
+
+      if (nomeEquipe1.equals(nomeEquipe2)) {
+        System.out.println("Você não pode cadastrar uma partida entre a mesma equipe\n");
+      } else if (campeonato.retornaEquipe(nomeEquipe2) == null) {
+        System.out.println("Não existe uma equipe cadastrada com esse nome\n");
+      }
+
+    } while (campeonato.retornaEquipe(nomeEquipe2) == null);
+
+    Equipe equipe1 = campeonato.retornaEquipe(nomeEquipe1);
+    Equipe equipe2 = campeonato.retornaEquipe(nomeEquipe2);
+
     System.out.print("Digite a data que a partida irá acontecer no formato 'dd/MM/yyyy': ");
     String inputData = scanner.nextLine();
+
     try {
-      LocalDate data = LocalDate.parse(inputData, formatter);
+      LocalDate data = LocalDate.parse(inputData, formatter); // ! Conferir se a data é atribuida formatada ou não
       System.out.println("Data cadastrada: " + data.format(formatter) + "\n");
-      Partida partida = new Partida(data);
-      campeonato.cadastrarPartida(partida);
+      Partida partida = new Partida(data, equipe1, equipe2);
+
+      if (campeonato.retornaPartida(data, nomeEquipe1, nomeEquipe2) == null) {
+        campeonato.cadastrarPartida(partida);
+      } else {
+        System.out.println("Já existe uma partida cadastrada com essas equipes e nessa data\n");
+      }
+
     } catch (Exception e) {
       System.out.println("Formato de data inválido. Certifique-se de usar o formato 'dd/MM/yyyy'.\n");
     }
+
+  }
+
+  public static void registrarPlacarPartida(Scanner scanner, DateTimeFormatter formatter, Campeonato campeonato) {
+    System.out.print("Digite o nome da primeira equipe: ");
+    String nomeEquipe1 = scanner.nextLine();
+
+    System.out.print("Digite o nome da segunda equipe: ");
+    String nomeEquipe2 = scanner.nextLine();
+
+    System.out.print("Digite a data que a partida aconteceu 'dd/MM/yyyy': ");
+    String inputData = scanner.nextLine();
+
+    LocalDate data = LocalDate.parse(inputData, formatter);
+
+    Partida partida = campeonato.retornaPartida(data, nomeEquipe1, nomeEquipe2);
+
+    System.out.print("Digite o placar da primeira equipe: ");
+    int placarEquipe1 = scanner.nextInt();
+
+    System.out.print("Digite o placar da segunda equipe: ");
+    int placarEquipe2 = scanner.nextInt();
+
+    partida.registrarPlacar(placarEquipe1, placarEquipe2);  
   }
 }
