@@ -25,8 +25,64 @@ import java.time.format.DateTimeFormatter;
  * o total de pontos marcados e sofridos por cada equipe nas partidas disputadas  - CONCLUÍDO
  
  ? (Caio Souza)
- * 5. Indicar a equipe com o melhor ataque e a equipe com a melhor defesa. 
+ * 5. Indicar a equipe com o melhor ataque e a equipe com a melhor defesa. - CONCLUÍDO
  */
+
+ /*
+  ? Documentação:
+  *
+  * Classe Equipe:
+  *   Atributos:
+  *     - nome: String
+  *     - vitorias: int
+  *     - derrotas: int
+  *     - golsMarcados: int
+  *     - golsSofridos: int
+  *     - pontos: int
+  *   Métodos:
+  *     - getNome(): String
+  *   Construtor:
+  *     - Equipe(String nome, int vitorias, int derrotas, int golsMarcados, int golsSofridos, int pontos)
+  *
+  * Classe Partida:
+  *   Atributos:
+  *     - data: LocalDate
+  *     - equipe1: Equipe
+  *     - equipe2: Equipe
+  *     - placarEquipe1: int
+  *     - placarEquipe2: int
+  *   Métodos:
+  *     - registrarPlacar(int placarEquipe1, int placarEquipe2): void
+  *   Construtor:
+  *     - Partida(LocalDate data, Equipe equipe1, Equipe equipe2, int placarEquipe1, int placarEquipe2)
+  *
+  * Classe Campeonato:
+  *   Atributos:
+  *     - listaEquipes: List<Equipe>
+  *     - listaPartidas: List<Partida>
+  *   Métodos:
+  *     - cadastrarEquipe(Equipe equipe): void
+  *     - cadastrarPartida(Partida partida): void
+  *     - equipeCSV(): void
+  *     - partidaCSV(): void
+  *     - listarEquipes(): void
+  *     - listarPartidas(): void
+  *     - retornaEquipe(String nomeEquipe): Equipe
+  *     - retornaPartida(LocalDate data, String nomeEquipe1, String nomeEquipe2): Partida
+  *     - tabelaClassificacao(): void
+  *     - melhorAtaqueDefesa(): void
+  *   Construtor:
+  *     - Campeonato()
+  *
+  * Classe LigasDesportivas:
+  *   Atributos:
+  *     - formatter: DateTimeFormatter
+  *   Métodos:
+  *     - main(String[] args): void
+  *     - criarCadastrarEquipe(Scanner scanner, Campeonato campeonato): void
+  *     - criarCadastrarPartida(Scanner scanner, Campeonato campeonato): void
+  *     - registrarPlacarPartida(Scanner scanner, Campeonato campeonato): void
+  */
 
 public class LigasDesportivas {
 
@@ -193,6 +249,14 @@ public class LigasDesportivas {
       System.out.println();
     }
 
+    public void melhorAtaqueDefesa() {
+      listaEquipes.sort((e1, e2) -> e2.golsMarcados - e1.golsMarcados);
+      System.out.println("Equipe com melhor ataque: " + listaEquipes.get(0).nome + " (" + listaEquipes.get(0).golsMarcados + " gols marcados)");
+
+      listaEquipes.sort((e1, e2) -> e1.golsSofridos - e2.golsSofridos);
+      System.out.println("Equipe com melhor defesa: " + listaEquipes.get(0).nome + " (" + listaEquipes.get(0).golsSofridos + " gols sofridos)\n");
+    }
+ 
   }
 
   public static void main(String[] args) {
@@ -242,7 +306,7 @@ public class LigasDesportivas {
       System.out.println("Erro ao carregar partidas do arquivo partidas.csv");
     }
     
-    System.out.println("Bem vindo ao sistema de ligas desportivas!\n");
+    System.out.println("\nBem vindo ao sistema de ligas desportivas!\n");
 
     do {
 
@@ -254,7 +318,8 @@ public class LigasDesportivas {
               "4 - Listar partidas\n" +
               "5 - Registrar placar de partida\n" +
               "6 - Tabela de classificação\n" +
-              "0 - Sair do sistema\n");
+              "7 - Equipe com melhor ataque e melhor defesa\n" +
+              "0 - Sair do sistema\n\n");
 
       opcao = scanner.nextInt();
       scanner.nextLine();
@@ -270,10 +335,12 @@ public class LigasDesportivas {
           break;
 
         case 3:
+          System.out.println("Equipes cadastradas:\n");
           campeonato.listarEquipes();
           break;
 
         case 4:
+          System.out.println("Partidas cadastradas:\n");
           campeonato.listarPartidas();
           break;
 
@@ -283,6 +350,10 @@ public class LigasDesportivas {
         
         case 6:
           campeonato.tabelaClassificacao();
+          break;
+
+        case 7:
+          campeonato.melhorAtaqueDefesa();
           break;
 
         case 0:
@@ -345,7 +416,7 @@ public class LigasDesportivas {
     String inputData = scanner.nextLine();
 
     try {
-      LocalDate data = LocalDate.parse(inputData, formatter); // ! Conferir se a data é atribuida formatada ou não
+      LocalDate data = LocalDate.parse(inputData, formatter);
       System.out.println("Data cadastrada: " + data.format(formatter) + "\n");
       Partida partida = new Partida(data, equipe1, equipe2, -1, -1);
 
